@@ -1,6 +1,6 @@
 // @deno-types="npm:@types/fluent-ffmpeg"
-import ffmpeg from 'npm:fluent-ffmpeg';
-import NodeID3 from 'npm:node-id3';
+import ffmpeg from "npm:fluent-ffmpeg";
+import NodeID3 from "npm:node-id3";
 
 async function downloadAndEdit(
   title: string,
@@ -8,22 +8,22 @@ async function downloadAndEdit(
   streamUrl: string,
   outputFilePath: string,
   onProgress: (progress: number) => void,
-  onEnd: () => void
+  onEnd: () => void,
 ) {
   await download(streamUrl, outputFilePath, onProgress);
 
-  const level = programTitle.includes('初級編')
-    ? '初級編'
-    : programTitle.includes('応用編')
-    ? '応用編'
-    : new Error('Invalid level');
+  const level = programTitle.includes("初級編")
+    ? "初級編"
+    : programTitle.includes("応用編")
+    ? "応用編"
+    : new Error("Invalid level");
   const album = `${title} ${level}`;
 
   NodeID3.update(
     {
       album,
     },
-    outputFilePath
+    outputFilePath,
   );
 
   onEnd();
@@ -32,20 +32,20 @@ async function downloadAndEdit(
 function download(
   streamUrl: string,
   outputFilePath: string,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number) => void,
 ) {
   return new Promise<void>((resolve, reject) => {
     ffmpeg(streamUrl)
-      .inputOptions('-http_seekable 0')
-      .outputOptions('-write_xing 0')
+      .inputOptions("-http_seekable 0")
+      .outputOptions("-write_xing 0")
       .save(outputFilePath)
-      .on('progress', (progress) => {
+      .on("progress", (progress) => {
         onProgress(progress.percent ?? 0);
       })
-      .on('end', () => {
+      .on("end", () => {
         resolve();
       })
-      .on('error', (error) => {
+      .on("error", (error) => {
         reject(error);
       });
   });
