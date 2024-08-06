@@ -1,10 +1,13 @@
 // @deno-types="npm:@types/cli-progress"
-import cliProgress from 'npm:cli-progress';
-import { fetchRadioSeries } from './api.ts';
-import { downloadAndEdit } from './ffmpeg.ts';
-import { urls } from './urls.ts';
+import cliProgress from "npm:cli-progress";
+import { fetchRadioSeries } from "./api.ts";
+import { downloadAndEdit } from "./ffmpeg.ts";
+import { urls } from "./urls.ts";
+import { addIdToHistoryFile, readHistoryFile } from "./history.ts";
 
-const homeDir = Deno.env.get('HOME');
+const homeDir = Deno.env.get("HOME");
+
+const downloadedEpisodes = await readHistoryFile();
 
 const radioSeriesPromises = urls.map(({ url }) => {
   return fetchRadioSeries(url);
@@ -16,26 +19,36 @@ const multibar = new cliProgress.MultiBar(
   {
     clearOnComplete: false,
     hideCursor: true,
-    format: ' {bar} | {filename} | {value}/{total}',
+    format: " {bar} | {filename} | {value}/{total}",
   },
-  cliProgress.Presets.shades_grey
+  cliProgress.Presets.shades_grey,
 );
 
 const progressBars = new Map<string, cliProgress.SingleBar>();
 
 radioSeries.forEach((json) => {
-  json.episodes.forEach((episode) => {
-    progressBars.set(
-      episode.program_title,
-      multibar.create(100, 0, {
-        filename: episode.program_title,
-      })
-    );
+  json.episodes.forEach(async (episode) => {
+    if (!downloadedEpisodes.has(episode.id)) {
+      progressBars.set(
+        episode.program_title,
+        multibar.create(100, 0, {
+          filename: episode.program_title,
+        }),
+      );
+      await addIdToHistoryFile(episode.id);
+    }
   });
 });
 
 const promises = radioSeries.flatMap((json) => {
   return json.episodes.map((episode) => {
+    if (downloadedEpisodes.has(episode.id)) {
+      console.log(
+        `Skipping already downloaded episode: ${episode.program_title}`,
+      );
+      return Promise.resolve();
+    }
+
     const outputFilePath = `${homeDir}/Downloads/${episode.program_title}.mp3`;
 
     return downloadAndEdit(
@@ -56,7 +69,7 @@ const promises = radioSeries.flatMap((json) => {
           progressBar.update(100);
           progressBar.stop();
         }
-      }
+      },
     );
   });
 });
