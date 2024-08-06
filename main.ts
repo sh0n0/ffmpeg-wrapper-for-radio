@@ -2,19 +2,9 @@
 import cliProgress from 'npm:cli-progress';
 import { fetchRadioSeries } from './api.ts';
 import { downloadAndEdit } from './ffmpeg.ts';
+import { urls } from './urls.ts';
 
 const homeDir = Deno.env.get('HOME');
-
-const urls = [
-  {
-    // Russian
-    url: 'https://www.nhk.or.jp/radio-api/app/v1/web/ondemand/series?site_id=YRLK72JZ7Q&corner_site_id=01',
-  },
-  {
-    // French
-    url: 'https://www.nhk.or.jp/radio-api/app/v1/web/ondemand/series?site_id=XQ487ZM61K&corner_site_id=01',
-  },
-];
 
 const radioSeriesPromises = urls.map(({ url }) => {
   return fetchRadioSeries(url);
