@@ -1,8 +1,50 @@
-export function add(a: number, b: number): number {
-  return a + b;
-}
+// @deno-types="npm:@types/cli-progress"
+import cliProgress from 'npm:cli-progress';
+import { fetchRadioList } from './api.ts';
+import { downloadAndEdit } from "./ffmpeg.ts";
 
-// Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
-if (import.meta.main) {
-  console.log("Add 2 + 3 =", add(2, 3));
-}
+const homeDir = Deno.env.get('HOME');
+
+const json = await fetchRadioList();
+
+const multibar = new cliProgress.MultiBar(
+  {
+    clearOnComplete: false,
+    hideCursor: true,
+    format: ' {bar} | {filename} | {value}/{total}',
+  },
+  cliProgress.Presets.shades_grey
+);
+
+const progressBars = new Map<string, cliProgress.SingleBar>(
+  json.episodes.map((episode) => {
+    return [
+      episode.program_title,
+      multibar.create(100, 0, {
+        filename: episode.program_title,
+      }),
+    ];
+  })
+);
+
+const promises = json.episodes.map((episode) => {
+  const outputFilePath = `${homeDir}/Downloads/${episode.program_title}.mp3`;
+
+  return downloadAndEdit(
+    json.title,
+    episode.program_title,
+    episode.stream_url,
+    outputFilePath,
+    (progress) => {
+      const progressInt = Math.floor(progress);
+      progressBars.get(episode.program_title)?.update(progressInt);
+    },
+    () => {
+      progressBars.get(episode.program_title)?.update(100);
+      progressBars.get(episode.program_title)?.stop();
+    }
+  );
+});
+
+await Promise.all(promises);
+multibar.stop();
