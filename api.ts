@@ -1,7 +1,5 @@
-export async function fetchRadioList(): Promise<RadioSeries> {
-  const response = await fetch(
-    'https://www.nhk.or.jp/radio-api/app/v1/web/ondemand/series?site_id=YRLK72JZ7Q&corner_site_id=01'
-  );
+export async function fetchRadioSeries(url: string): Promise<RadioSeries> {
+  const response = await fetch(url);
   return await response.json();
 }
 
